@@ -1,0 +1,16 @@
+{
+  "name": "unstet",
+  "version": "0.0.1",
+  "description": "unstetPlayer",
+  "main": "daemon.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Basil Stotz",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "express": "^4.18.1",
+    "osc-js": "^2.4.1",
+    "ws": "^8.18.3"
+  }
+}

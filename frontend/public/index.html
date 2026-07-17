@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unstet</title>
+  <style>
+    html,body {
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      background:black;
+    }
+  </style>
+  <!--
+  <script type="text/javascript" src="addons/socket.io-1.4.5.js"></script>
+  <script src="addons/p5.js"></script>
+  <script src="sketch.js"></script>
+  -->
+
+     <script src="lib/p5.min.js"></script>
+    <script src="lib/p5.dom.min.js"></script>
+    <script src="lib/p5.sound.min.js"></script>
+    <script src="lib/p5.touchgui.js"></script>
+
+<script type="text/javascript" src="osc-js/lib/osc.min.js"></script>
+
+
+</head>
+
+
+
+<body>
+<script type="text/javascript">
+  var osc = new OSC();
+  osc.open(); // connect by default to ws://localhost:8080
+
+  osc.on('error',(err) => { console.log(err);});
+
+  osc.on('/*', message => {
+  console.log(message.args); // prints the message arguments
+});
+  /*
+  document.getElementById('send').addEventListener('click', function() {
+    var message = new OSC.Message('/test/random', Math.random());
+    osc.send(message);
+  });
+  */
+</script>
+<script src="sketch.js"></script>
+
+
+<!--
+<button id="send">Send Message</button>
+-->
+<!--<script type="text/javascript" src="dist/osc.min.js"></script>--->
+
+</body>
+</html>

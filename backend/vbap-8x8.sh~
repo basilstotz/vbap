@@ -1,0 +1,2 @@
+#!/bin/sh
+pd -nogui vbap-8x8.pd
