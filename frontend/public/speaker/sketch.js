@@ -10,7 +10,7 @@ let mx,my;
 
 let send;
 let uniform;
-
+let locateButton=[];
 
 let socket;
 
@@ -211,6 +211,12 @@ function preload(){
 }
 
 
+function locate(num){
+    //console.log("locate",num);
+    socket.emit('locate',num);
+}
+
+
 function setup() {
     w=windowWidth;
     h=windowHeight;
@@ -218,6 +224,8 @@ function setup() {
     cy=h/2;
     createCanvas(w,h);
     //frameRate(30);
+
+	
     stage=new Stage(8);
 
     socket = io();
@@ -225,6 +233,13 @@ function setup() {
 	console.log(speakers);
 	stage.set(speakers)
     })
+
+    for(let i=0;i<9;i++){
+	let b=locateButton[i]=createButton(i);
+	b.position(10,120+i*20);
+	b.mousePressed( () => { locate(i)} );
+    }
+
 }
 
 
