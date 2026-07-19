@@ -216,6 +216,9 @@ function locate(num){
     socket.emit('locate',num);
 }
 
+function stash(){
+    socket.emit('stash');
+}
 
 function setup() {
     w=windowWidth;
@@ -236,7 +239,7 @@ function setup() {
 
     for(let i=0;i<9;i++){
 	let b=locateButton[i]=createButton(i);
-	b.position(10,120+i*20);
+	b.position(10,140+i*20);
 	b.mousePressed( () => { locate(i)} );
     }
 

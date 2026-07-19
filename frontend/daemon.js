@@ -55,6 +55,14 @@ io.sockets.on('connection',
 	     emitSpeakers(message);
 	 })
 
+	 socket.on('locate', num => {
+	     osc2.send(new OSC.Message('/locate',num));
+	 });
+
+	 socket.on('stash', () => {
+	     socket.emit('speakers',speakers)
+	 });
+
 	 socket.on('disconnect', function() {
 	     console.log('Client '+ socket.id + ' has disconnected');
 	 });

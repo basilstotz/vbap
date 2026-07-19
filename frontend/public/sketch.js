@@ -137,9 +137,9 @@ function setup() {
 	}
     }
     let off=py+2*250;
-    noiseButtons(735,off);
+    //noiseButtons(735,off);
 
-    makeLink(500,off);
+    makeLink(850,off+5);
     
     main=createSlider("Rot 1", 10,off,430,35,-90,0);
     main.val=-6;
@@ -202,11 +202,6 @@ function output(){
 	let center=chan.center;
 	let mute=chan.mute;
 
-
-	if(link.isPessed){
-	    window.location='speaker/index.html'
-	}
-	
 	if(button.isPressed)rot.val=0;
 
 	if(center.isPressed){
@@ -256,6 +251,11 @@ function output(){
 	oscsend("/main",dBtoLevel(main.val));
     }
 
+
+	if(link.isPressed){
+	    window.location='speaker/index.html'
+	}
+/*	
     for(let i=0;i<8;i++){
 	
 	if(noise[i].isPressed){
@@ -267,7 +267,7 @@ function output(){
 	}
 	    
     }
-
+*/
 }
 
 function draw() {

@@ -32,10 +32,19 @@
 
 
 <body>
+  <script type="text/javascript">
+    function goto(){
+	window.location='../index.html'
+    }
+  </script>
 
-<a href="../index.html" style="position:absolute;left:20px;top:10px">zurück</a>
-<button style="position:absolute;left:20px;top:50px" onclick="stage.uniform()">uniform</button>
-<button style="position:absolute;left:20px;top:90px" onclick="stage.socketio()">commit</button>
+  
+<!--<a href="../index.html" style="position:absolute;left:20px;top:10px">zurück</a>-->
+<button style="position:absolute;left:10px;top:10px" onclick="goto()">mixer</button>
+
+<button style="position:absolute;left:10px;top:40px" onclick="stage.uniform()">uniform</button>
+<button style="position:absolute;left:10px;top:100px" onclick="stage.socketio()">save</button>
+<button style="position:absolute;left:10px;top:70px" onclick="stash()">load</button>
 
 
 <script type="text/javascript">
