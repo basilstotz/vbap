@@ -1,4 +1,7 @@
 let channels=[];
+let noise=[];
+let main;
+
 let sounds=[];
 let soundsState=-1;
 let files=[];
@@ -8,16 +11,96 @@ let play,pause,stop
 let azimuth=[]
 let radius=[];
 
+let link;
+
 let gui;
+
+let socket;
+
+function dBtoLevel(db){
+    return Math.pow(10,db/20);
+}
 
 function channel(x,y,w=180,h=180){
     let pan=createSlider2d("Pan 1",x,y,w,h,-5,5,-5,5);
+    //console.log(pan);
     let vol=createSliderV("Vol 1", x+w+10,y,w/4,h,-60,24);
-    let rot=createSlider("Rot 1", x,y+h+10,w,h/4,-5,5);
-    let button=createButton("0",x+w+10,y+h+10,25,25);
+    let rot=createCrossfader("Rot 1", x,y+h+10,w,h/4,-5,5);
+    let button=createButton("R",x+w+10,y+h+10,20,20);
+    let center=createButton("C",x+w+10,y+h+10+25,20,20);
+    let noise=createCheckbox("N",x+w+10+25,y+h+10,20,20);
+    let mute=createCheckbox("M",x+w+10+25,y+h+10+25,20,20);
     vol.val=0
     rot.val=0;
-    return { pan: pan, vol:vol, rot: rot, button:button }
+    noise.val=1;
+    mute.val=1;
+    return { pan: pan,
+	     vol:vol,
+	     rot: rot,
+	     button:button,
+	     noise: noise,
+	     center: center,
+	     mute: mute
+	   }
+}
+
+function noiseButtons(x,y){
+    let xpos=x;
+    noise[0]=createButton("off",xpos,y+10,40,20);
+    for(let i=1;i<8;i++){
+	noise[i]=createButton(i,xpos+50,y+10,20,20);
+	xpos+=30;
+    }
+    //
+}
+
+function makeLink(x,y){
+    link=createButton("Speakers",x,y,150,20)
+}
+
+console.log(noise);
+
+function oscsend(...args){
+    let message = new OSC.Message(...args);
+    osc.send(message);
+}
+
+function radToDeg(rad){
+    return rad*(180/Math.PI)
+}
+
+function emitSpeakers(speakers){
+    console.log("receved speakers message");
+    let radii=[];
+    let message = new OSC.Message('/speaker');
+    message.add(2);
+    for(let i=0;i<speakers.length;i++){
+	let sp=speakers[i];
+	message.add(Math.round(sp.azimuth));
+	radii.push(sp.radius);
+    }
+    osc.send(message);
+
+    let min=10000;
+    let max=0;
+    for(let i=0;i<radii.length;i++){
+	let r=radii[i];
+	if(r>max)max=r;
+	if(r<min)min=r;
+    }
+    let delay=[]
+    for(let i=0;i<radii.length;i++){
+	let r=radii[i];
+	let t=(max-r)/330
+	delay.push(1000*t);
+    }
+    message = new OSC.Message('/delay');
+    for(let i=0;i<delay.length;i++){
+	let dl=delay[i];
+	message.add(Math.round(dl));
+    }
+    //console.log(min,max);
+    osc.send(message);
 }
 
 function setup() {
@@ -30,15 +113,19 @@ function setup() {
 	radius[i]=1;
     }
     */
-    
-  gui = createGui();
-  
-  // simpleLayout(); // <- uncomment for simple layout
-  //gui.mobileLayout(); // <- uncomment for mobile layout  
 
-  // Set style to Blue!
-  gui.loadStyle("Blue");
-  //gui.loadStyle("TerminalGreen");
+    //socket= io();
+    //socket.on('speakers',);
+
+    
+    gui = createGui();
+
+    // simpleLayout(); // <- uncomment for simple layout
+    //gui.mobileLayout(); // <- uncomment for mobile layout  
+
+    // Set style to Blue!
+    gui.loadStyle("Blue");
+    //gui.loadStyle("TerminalGreen");
 
     playState=0;
     
@@ -50,21 +137,21 @@ function setup() {
 	}
     }
     let off=py+2*250;
-    play=createButton("Play",px,off,80,30);
-    pause=createButton("Pause",px+90,off,80,30);
-    stop=createButton("Stop",px+2*90,off,80,30);
+    noiseButtons(735,off);
 
-    files=['sounds/110319-master.ogg',
-	   'sounds/100319-master.ogg',
-	   'sounds/200119-long.ogg',
-	   'sounds/150119-master.ogg',
-	   'sounds/orgeltamtam-short.ogg'];
+    makeLink(500,off);
     
-    for(let i=0;i<files.length;i++){
-	sounds.push(createButton(i+1+"",px+270+i*40,off,30,30));
-    }
+    main=createSlider("Rot 1", 10,off,430,35,-90,0);
+    main.val=-6;
+
+    //init vbap
+    //oscsend("/fader",200);
+    //oscsend("/speaker", 2, 0, 45, 90, 135, 180, 225, 270, 315);
+    //oscsend("/delay", 0, 0, 0, 0, 0, 0, 0, 0);
     
-    //createSlider("EEE",490,off,130,30);
+
+
+    
 }
 
 function windowResized() {
@@ -74,14 +161,13 @@ function windowResized() {
 }
 
 
-function setPosOSC(x,y){
+function setPosOSC(index,x,y){
     const zero=0.00000000001;
     let a=Math.atan2(y,x)*(180/Math.PI);
     let r=Math.sqrt(x*x+y*y);
     if(a%1==0)a+=zero;
-    if(r%1==0)r+=zero;                    //war "set"
-    let message = new OSC.Message('/gunnar/set', i+1, a,zero,r);
-    osc.send(message);  
+    if(r%1==0)r+=zero;
+    oscsend('/aed',index+1, a,zero,r);  
 }
 
 function rotat(val,r){
@@ -106,15 +192,50 @@ let panText="";
 
 function output(){
     for(i=0;i<channels.length;i++){
+	
 	let chan=channels[i];
 	let pan=chan.pan;
 	let vol=chan.vol;
 	let rot=chan.rot;
 	let button=chan.button;
+	let noise=chan.noise;
+	let center=chan.center;
+	let mute=chan.mute;
 
-	if(button.isPressed)rot.val=0;
+
+	if(link.isPessed){
+	    window.location='speaker/index.html'
+	}
 	
-	//if(rot.isChanged)console.log(rot.val)
+	if(button.isPressed)rot.val=0;
+
+	if(center.isPressed){
+	    pan.val.x=0;
+	    pan.val.y=0;
+	}
+	if(noise.isChanged){
+	    if(noise.val==0){
+		oscsend("/noise",i+1)
+	    }else{
+		oscsend("/noise",0);
+	    }
+	}
+	if(mute.isChanged){
+	    if(mute.val==0){
+		//on
+		oscsend("/volume",i+1,dBtoLevel(-90))
+	    }else{
+		//off
+		oscsend("/volume",i+1,dBtoLevel(vol.val))
+	    }
+	}
+	
+	if(vol.isChanged) {
+	    //let message = new OSC.Message();
+            oscsend('/volume', i+1, dBtoLevel(vol.val));
+	}
+
+	//if(rot.isChanged)console.log(rotaaaal)
 	if(!pan.isChanged) {
 	//if(true){
 	    //console.log(pan.val);
@@ -123,29 +244,61 @@ function output(){
 	    pan.valX=rrr.x;
 	    pan.valY=rrr.y;
 	}
-	//console.log(pan.val.x,pan.val.y);
-        setPosOSC(pan.val.x,pan.val.y);	    
-	
-	if(vol.isChanged) {
-	    let message = new OSC.Message('/gunnar/vol', i+1, vol.val);
-            osc.send(message);  
-	}   
+	let r=Math.sqrt(pan.valX*pan.valX+pan.valY*pan.valY)
+	if(pan.isChanged ||( Math.abs(rot.val)>0.0001 && r>0.1 && frameCount%2==0)){
+	    //console.log(i,pan.val.x,pan.val.y);
+	    setPosOSC(i,pan.val.x,pan.val.y);	    
+	}	
+	//ochan=JSON.parse(JSON.stringify(chan));
+    }//all channels
+
+    if(main.isChanged){
+	oscsend("/main",dBtoLevel(main.val));
     }
-   
-    if(pause.isChanged && pause.isPressed){
-	let message = new OSC.Message('/gunnar/pause');
-        osc.send(message);//console.log("PAUSE");
+
+    for(let i=0;i<8;i++){
+	
+	if(noise[i].isPressed){
+	    for(let j=0;j<8;j++)noise[j].setStyle( {fillBg: color("#aaaaff")}); 
+	    noise[i].setStyle( {fillBg: color("#eeeeee")}); 
+	    
+	    //noise[i].val=1;
+	    oscsend("/locate",i);
+	}
+	    
+    }
+
+}
+
+function draw() {
+    background(220);
+    drawGui();
+    output();
+    //text(panText,50,50);
+
+}
+
+/// Add these lines below sketch to prevent scrolling on mobile
+function touchMoved() {
+  // do some stuff
+  return false;
+}
+
+/*
+     if(pause.isChanged && pause.isPressed){
+	//let message = new OSC.Message('/gunnar/pause');
+        oscsend('/gunnar/pause');
 	playState=-1;
      }
    
     if(play.isChanged && play.isPressed){
-	let message = new OSC.Message('/gunnar/play');
-        osc.send(message);//console.log("paly");
+	//let message = new OSC.Message('/gunnar/play');
+        oscsend('/gunnar/play');//console.log("paly");
 	playState=1;
     }
     if(stop.isChanged && stop.isPressed){
-	let message = new OSC.Message('/gunnar/stop');
-        osc.send(message);//console.log("STOP");
+	//let message = new OSC.Message('/gunnar/stop');
+        osc.send('/gunnar/stop');//console.log("STOP");
 	playState=0;
     }
     play.setStyle( {fillBg: color("#aaaaaa")}); 
@@ -184,19 +337,4 @@ function output(){
 		sounds[soundsState].setStyle( { fillBgHover: color("#ffaaaa")});
         }
     }
-}
-
-function draw() {
-    background(220);
-    drawGui();
-    output();
-    //text(panText,50,50);
-
-}
-
-/// Add these lines below sketch to prevent scrolling on mobile
-function touchMoved() {
-  // do some stuff
-  return false;
-}
-
+*/
