@@ -1,3 +1,8 @@
+*~
+
+frontend/speakers.json
+.gitignore
+
 # Logs
 logs
 *.log

@@ -42,7 +42,7 @@ io.sockets.on('connection',
 	 console.log("We have a new client: " + socket.id);
 
 	 socket.on('speakers', message => {
-	     //console.log(JSON.stringify(message,null,2));
+	     console.log("*"+JSON.stringify(message,null,2)+"*");
 	     speakers=message;
 	     console.log("write file");
 	     fs.writeFile('speakers.json', JSON.stringify(message,null,2), err => {
@@ -61,6 +61,10 @@ io.sockets.on('connection',
 
 	 socket.on('stash', () => {
 	     socket.emit('speakers',speakers)
+	 });
+
+	 socket.on('main', (val) => {
+	     osc2.send(new OSC.Message('/main',val));
 	 });
 
 	 socket.on('disconnect', function() {
@@ -140,7 +144,7 @@ const osc2 = new OSC({ plugin: new OSC.DatagramPlugin(config2) })
 
 
 function emitSpeakers(speakers){
-    console.log("receved speakers message");
+    console.log("oscsend speakers");
     let radii=[];
     let message = new OSC.Message('/speaker');
     message.add(2);

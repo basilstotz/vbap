@@ -5,6 +5,8 @@ let stage;
 
 let black,grey,mute;
 
+let form=false;
+
 let cx,cy;
 let mx,my;
 
@@ -12,112 +14,135 @@ let send;
 let uniform;
 let locateButton=[];
 
+let main;
+let oldmain=0;
+
 let socket;
 
 const PIXELPERMETER = 100;
 
 class Speaker{
-    constructor(azimuth,radius,label=''){
+    constructor(azimuth, radius, label=''){
+	this.setPosPolar(azimuth,radius);
+	this.label = label;
+	this.volume = 1.0;
+    }
+
+    setPosPolar(azimuth, radius){
 	this.azimuth=azimuth;
 	this.radius=radius;
-	this.label=label;
-	//this.selected=false;
+	let a=degToRad(this.azimuth);
+	this.x = Math.cos(a)*this.radius;
+	this.y = Math.sin(a)*this.radius;
     }
-
     
-    update(){
-	let y=mToPx(Math.sin(degToRad(this.azimuth))*this.radius);
-	let x=mToPx(Math.cos(degToRad(this.azimuth))*this.radius);
-
-	//text(x+" "+mouseX+" "+y+" "+mouseY,100,100);
-	//text("gaga",100,100);
-	
-	let dx=mx-x;
-	let dy=my-y;
-
-	if(mouseIsPressed){
-
-	    let r=Math.sqrt(dx*dx+dy*dy);
-	    if(r<20){
-		this.selected=true;
-		this.show(gray,x,y);
-		
-		let a=radToDeg(Math.atan2(my,mx));
-		let r=pxToM(Math.sqrt(mx*mx+my*my))
-		this.azimuth=a;
-		this.radius=r;
-		push();
-		scale(1,-1);
-		translate(cx-80,-cy+10);
-		//translate(-100+x,-130+y);
-		fill(255);
-		rect(0,0,70,110);
-		fill(0);
-		noStroke();
-		textSize(18);
-		text(this.label,10,20)
-		fill(0);
-		textSize(14);
-		text("a = "+Math.round(this.azimuth),10,45);
-		text("r = "+Math.round(this.radius*10)/10,10,60);
-		text("x = "+Math.round(10*pxToM(x))/10,10,85);
-		text("y = "+Math.round(10*pxToM(y))/10,10,100);
-		pop();
-	    }else{
-		this.selected=false;
-		this.show(black,x,y);
-	    }
+    setPosCartesian(x, y){
+	this.x = x
+	this.y = y
+	this.azimuth = radToDeg(atan2(y,x));
+	this.radius = Math.sqrt(x*x+y*y)
+    }
+    
+    update(selected){
+	if(selected){
+	    this.show(black,this.x,this.y);
+	    this.hud(cx-80,-cy+10);
 	}else{
-	    this.selected=false;
-	    this.show(black,x,y)
+	    this.show(gray,this.x,this.y);
 	}
-	
     }
 
-    show(img,x,y){
+    show(img,mx,my){
+	let x=mToPx(mx);
+	let y=mToPx(my);
 	push();
-	translate(x,y);
-	fill(0);
-	push();
-	scale(1,-1);
-	text(this.label,-20,-20);
-	pop();
-	push();
-	rotate(Math.atan2(y,x)+Math.PI);
-	translate(-20,-20);
-	image(img,0,0,40,40);
-	pop();
-	fill(255,0,0);
-	ellipse(0,0,10,10);
+	   //scale(1,-1);
+	   translate(x,y);
+	   fill(0);
+	   push();
+	     scale(1,-1);
+	     text(this.label,-20,-20);
+	   pop();
+	   push();
+	     rotate(Math.atan2(y,x)+Math.PI);
+	     translate(-20,-20);
+	     image(img,0,0,40,40);
+	   pop();
+	   fill(255,0,0);
+	   ellipse(0,0,10,10);
 	pop();
     }	
+
+    
+    hud(x,y){
+	push();
+	scale(1,-1);
+	translate(x,y);
+	//translate(-100+x,-130+y);
+	fill(255);
+	rect(0,0,70,110);
+	fill(0);
+	noStroke();
+	textSize(18);
+	text(this.label,10,20)
+	fill(0);
+	textSize(14);
+	text("a = "+Math.round(this.azimuth),10,45);
+	text("r = "+Math.round(this.radius*100)/100,10,60);
+	text("x = "+Math.round(100*this.x)/100,10,85);
+	text("y = "+Math.round(100*this.y)/100,10,100);
+	pop();
+    }
+
     
 }
 
 class Stage{
     constructor(){
-	this.uniform(8)
+	this.speakers=[];
     }
 	
     update(){
-	for(let i=0;i<this.num;i++){
-	    this.speakers[i].update();
+	let selected = this.select();
+	
+	if(selected>-1){
+	    if(mouseIsPressed)this.speakers[selected].setPosCartesian(mx,my);
+	}
+	
+ 	for(let i=0;i<this.speakers.length;i++){
+	    let s = ( i == selected ) 
+	    this.speakers[i].update(s);	   
 	}
     }
 
+    select(){
+	let sel = -1;
+ 	for(let i=0;i<this.speakers.length;i++){
+	    let sp = this.speakers[i];
+	    let dx = sp.x - mx;
+	    let dy = sp.y - my;
+	    let r = Math.sqrt(dx*dx+dy*dy);
+	    if(r<0.15){
+		sel = i;
+		break;
+	    }
+	}
+	return sel
+    }
+    
     uniform(num=8){
-	this.num=num;
 	this.speakers=[];
 	let diff=360/num;
 	for(let i=0;i<num;i++){
 	    let ln=i+1;
 	    this.speakers[i]= new Speaker(i*diff,2.0,'ch '+ln);
 	}
+	//console.log("uni",this.speakers);
     }
 	    
     get(){
 	let out=[];
-	for(let i=0;i<this.num;i++){
+	for(let i=0;i<this.speakers.length;i++){
 	    let sp=this.speakers[i];
 	    let a=sp.azimuth;
 	    let r=sp.radius;
@@ -128,54 +153,24 @@ class Stage{
 	return out;
     }
 
-
-    socketio(){
-	socket.emit('speakers',this.get())
-    }
-
-
-/*
-    oscsend(){
-	let radii=[];
-	let message = new OSC.Message('/speaker');
-	message.add(2);
-	for(let i=0;i<this.speakers.length;i++){
-	    let sp=this.speakers[i];
-	    message.add(Math.round(radToDeg(sp.azimuth)));
-	    radii.push(sp.radius);
-	}
-	osc.send(message);
-
-	let min=10000;
-	let max=0;
-	for(let i=0;i<radii.length;i++){
-	    let r=radii[i];
-	    if(r>max)max=r;
-	    if(r<min)min=r;
-	}
-	let delay=[]
-	for(let i=0;i<radii.length;i++){
-	    let r=radii[i];
-	    let t=(max-r)/330
-	    delay.push(1000*t);
-	}
-	message = new OSC.Message('/delay');
-	for(let i=0;i<delay.length;i++){
-	    let dl=delay[i];
-	    message.add(Math.round(dl));
-	}
-	//console.log(min,max);
-	osc.send(message);
-	
-    }
-*/    
-    set(stage){
+    set(speakers){
+	//console.log("set",speakers);
 	this.speakers=[];
-	for(let i=0;i<stage.length;i++){
-	    let { azimuth, radius, label }=stage[i];
+	for(let i=0;i<speakers.length;i++){
+	    let { azimuth, radius, label }=speakers[i];
 	    this.speakers[i]= new Speaker(azimuth,radius,label);
 	}
     }
+
+    save(){
+	//console.log("get",this.get());
+	socket.emit('speakers',this.get())
+    }
+
+    load(){
+	socket.emit('stash');
+    }
+
 }
 
 function dBtoLevel(db){
@@ -197,11 +192,7 @@ function pxToM(pixel){
 function mToPx(meter){
     return PIXELPERMETER*meter
 }
-	    
-function oscsend(...args){
-    let message = new OSC.Message(...args);
-    osc.send(message);
-}
+
 
 //Mute_Icon.svg  Speaker_Icon_gray.svg  Speaker_Icon.svg
 function preload(){
@@ -210,15 +201,19 @@ function preload(){
     mute=loadImage('icons/Mute_Icon.svg');
 }
 
-
+/*
 function locate(num){
     //console.log("locate",num);
     socket.emit('locate',num);
 }
 
-function stash(){
-    socket.emit('stash');
+
+function mainvol(){
+    socket.emit('main',main.val);
 }
+*/
+
+
 
 function setup() {
     w=windowWidth;
@@ -228,38 +223,42 @@ function setup() {
     createCanvas(w,h);
     //frameRate(30);
 
-	
-    stage=new Stage(8);
-
+    stage = new Stage();
+    
     socket = io();
     socket.on('speakers', speakers => {
-	console.log(speakers);
+	//console.log(speakers);
 	stage.set(speakers)
     })
-
+    
+ 
     for(let i=0;i<9;i++){
 	let b=locateButton[i]=createButton(i);
 	b.position(10,140+i*20);
-	b.mousePressed( () => { locate(i)} );
+	b.mousePressed( () => { socket.emit('locate',i)} );
     }
 
+    main=createSlider(0,1,0.2,0);
+    main.position(10,h-35);
+    ////main.changed(mainvol);
 }
 
-
-function windowResized() {
-    w=windowWidth;
-    h=windowHeight;
-    resizeCanvas(w,h);
-}
 
 
 function draw() {
     background(220);
     
-    mx=mouseX-cx;
-    my=-1*(mouseY-cy);
-    pmx=pmouseX-cx;
-    pmy=-1*(pmouseY-cy);
+    mx=pxToM(mouseX-cx);
+    my=pxToM(-1*(mouseY-cy));
+
+    text(mx+" "+my,120,60)
+    //pmx=pmouseX-cx;
+    //pmy=-1*(pmouseY-cy);
+
+    if(main.value()!=oldmain){
+	socket.emit('main',main.value());
+	oldmain=main.value();
+    }
     
     //text(mx+" "+my,100,100);
     translate(cx,cy);
@@ -268,7 +267,7 @@ function draw() {
     ellipse(0,0,10,10);
     noFill();
     //scales;
-    stroke(160);
+    stroke(150);
     for(let i=1;i<10;i++)ellipse(0,0,200*i,200*i);
     //x-achse
     stroke(0);
@@ -278,6 +277,17 @@ function draw() {
     
     stage.update();
 }
+
+function windowResized() {
+    w=windowWidth;
+    h=windowHeight;
+    cx=w/2;
+    cy=h/2;
+    main.position(10,h-35);
+    resizeCanvas(w,h);
+}
+
+
 
 /// Add these lines below sketch to prevent scrolling on mobile
 function touchMoved() {
